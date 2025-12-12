@@ -1,0 +1,20 @@
+# Web Framework
+fastapi==0.115.5
+uvicorn[standard]==0.32.1
+python-multipart==0.0.18
+pydantic-settings>=2.0.0
+
+# OCR
+easyocr==1.7.2
+torch>=2.0.0
+torchvision>=0.15.0
+opencv-python>=4.8.0
+
+# Archive Support
+# py7zr==0.22.0  # Commented out - requires C++ build tools on Windows
+rarfile==4.2
+
+# Utility
+python-dotenv==1.0.1
+Pillow==11.0.0
+aiofiles==24.1.0
