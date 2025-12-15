@@ -24,7 +24,12 @@ image_service = ImageService()
 ocr_service = OCRService(
     languages=settings.ocr_languages_list,
     gpu=settings.OCR_GPU_ENABLED,
-    max_workers=settings.MAX_CONCURRENT_OCR
+    max_workers=settings.MAX_CONCURRENT_OCR,
+    paragraph_mode=settings.OCR_PARAGRAPH_MODE,
+    min_confidence=settings.OCR_MIN_CONFIDENCE,
+    strip_whitespace=settings.OCR_STRIP_WHITESPACE,
+    remove_empty_lines=settings.OCR_REMOVE_EMPTY_LINES,
+    max_image_size=settings.OCR_MAX_IMAGE_SIZE
 )
 
 

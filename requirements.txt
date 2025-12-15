@@ -11,7 +11,7 @@ torchvision>=0.15.0
 opencv-python>=4.8.0
 
 # Archive Support
-# py7zr==0.22.0  # Commented out - requires C++ build tools on Windows
+# py7zr==0.22.0  # Optional - for 7z support (requires C++ build tools on Windows)
 rarfile==4.2
 
 # Utility

@@ -27,6 +27,16 @@ class Settings(BaseSettings):
     OCR_TIMEOUT_SECONDS: int = 30
     MAX_CONCURRENT_OCR: int = 4
 
+    # OCR Cleanup Options
+    OCR_PARAGRAPH_MODE: bool = False  # Merge lines into paragraphs
+    OCR_MIN_CONFIDENCE: float = 0.0  # Filter out low-confidence text (0.0 - 1.0)
+    OCR_STRIP_WHITESPACE: bool = True  # Remove leading/trailing whitespace
+    OCR_REMOVE_EMPTY_LINES: bool = False  # Remove empty lines from output
+
+    # OCR Performance Options
+    OCR_MAX_IMAGE_SIZE: int = 1920  # Resize images larger than this (width in pixels, 0 = no resize)
+    OCR_BATCH_SIZE: int = 5  # EasyOCR batch processing size
+
     # Supported Formats
     SUPPORTED_ARCHIVE_FORMATS: List[str] = ["zip", "rar", "7z", "tar", "gz", "bz2"]
     SUPPORTED_IMAGE_FORMATS: List[str] = ["png", "jpg", "jpeg"]

@@ -34,6 +34,9 @@ class ArchiveService:
             'bz2': 'tarfile'
         }
 
+        # Configure rarfile to use system unrar
+        rarfile.UNRAR_TOOL = "unrar"
+
         if PY7ZR_AVAILABLE:
             self.SUPPORTED_ARCHIVES['7z'] = 'py7zr'
         else:

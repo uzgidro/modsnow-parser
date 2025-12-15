@@ -4,6 +4,8 @@ from typing import List, Dict, Optional, Tuple
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 import logging
+import numpy as np
+import cv2
 
 logger = logging.getLogger(__name__)
 
@@ -11,7 +13,17 @@ logger = logging.getLogger(__name__)
 class OCRService:
     """Service for extracting text from images using EasyOCR"""
 
-    def __init__(self, languages: List[str] = ['en'], gpu: bool = False, max_workers: int = 4):
+    def __init__(
+        self,
+        languages: List[str] = ['en'],
+        gpu: bool = False,
+        max_workers: int = 4,
+        paragraph_mode: bool = False,
+        min_confidence: float = 0.0,
+        strip_whitespace: bool = True,
+        remove_empty_lines: bool = False,
+        max_image_size: int = 1920
+    ):
         """
         Initialize EasyOCR reader
 
@@ -19,6 +31,11 @@ class OCRService:
             languages: List of language codes (e.g., ['en', 'ru', 'zh'])
             gpu: Use GPU acceleration if available
             max_workers: Maximum number of concurrent OCR operations
+            paragraph_mode: Merge lines into paragraphs with spaces
+            min_confidence: Minimum confidence threshold (0.0 - 1.0)
+            strip_whitespace: Remove leading/trailing whitespace from text
+            remove_empty_lines: Remove empty lines from output
+            max_image_size: Maximum image width in pixels (resize if larger, 0 = no resize)
         """
         logger.info(f"Initializing EasyOCR with languages: {languages}, GPU: {gpu}")
         self.reader = easyocr.Reader(
@@ -28,6 +45,11 @@ class OCRService:
         )
         self.executor = ThreadPoolExecutor(max_workers=max_workers)
         self.max_concurrent = max_workers
+        self.min_confidence = min_confidence
+        self.strip_whitespace = strip_whitespace
+        self.remove_empty_lines = remove_empty_lines
+        self.paragraph_mode = paragraph_mode
+        self.max_image_size = max_image_size
 
     async def extract_text_from_image(self, image_path: Path) -> Dict:
         """
@@ -54,8 +76,35 @@ class OCRService:
 
             # Parse results
             if result:
-                # Combine all text with newlines
-                text = '\n'.join([detection[1] for detection in result])
+                # Filter by confidence threshold
+                if self.min_confidence > 0:
+                    result = [r for r in result if r[2] >= self.min_confidence]
+
+                if not result:
+                    return {
+                        'text': '',
+                        'confidence': 0.0,
+                        'details': []
+                    }
+
+                # Extract text and apply cleanup
+                text_lines = [detection[1] for detection in result]
+
+                # Apply whitespace stripping
+                if self.strip_whitespace:
+                    text_lines = [line.strip() for line in text_lines]
+
+                # Remove empty lines if requested
+                if self.remove_empty_lines:
+                    text_lines = [line for line in text_lines if line]
+
+                # Combine text
+                if self.paragraph_mode:
+                    # Join with spaces for paragraph mode
+                    text = ' '.join(text_lines)
+                else:
+                    # Join with newlines for line mode
+                    text = '\n'.join(text_lines)
 
                 # Calculate average confidence
                 confidences = [detection[2] for detection in result]
@@ -79,6 +128,7 @@ class OCRService:
     def _process_image(self, image_path: str) -> List:
         """
         Synchronous OCR processing
+        Uses cv2.imdecode to support Unicode file paths
 
         Args:
             image_path: Path to image as string
@@ -86,7 +136,29 @@ class OCRService:
         Returns:
             List of detection results
         """
-        return self.reader.readtext(image_path)
+        # Read image using numpy to handle Unicode paths
+        # cv2.imread() fails with non-ASCII characters in path on Windows
+        with open(image_path, 'rb') as f:
+            image_data = np.frombuffer(f.read(), np.uint8)
+
+        # Decode image from buffer
+        image = cv2.imdecode(image_data, cv2.IMREAD_COLOR)
+
+        if image is None:
+            raise ValueError(f"Failed to decode image: {image_path}")
+
+        # Resize image if too large (speeds up OCR significantly)
+        if self.max_image_size > 0:
+            height, width = image.shape[:2]
+            if width > self.max_image_size:
+                scale = self.max_image_size / width
+                new_width = self.max_image_size
+                new_height = int(height * scale)
+                image = cv2.resize(image, (new_width, new_height), interpolation=cv2.INTER_AREA)
+                logger.debug(f"Resized image from {width}x{height} to {new_width}x{new_height}")
+
+        # Pass numpy array to EasyOCR instead of file path
+        return self.reader.readtext(image)
 
     async def batch_process_images(
         self,
